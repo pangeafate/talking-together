@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ROTATION_ANGLE = 0.2; // Rotation angle multiplier
   
   // Fetch cards data
-  fetch('cards.json')
+  fetch('./cards.json')
     .then(response => response.json())
     .then(data => {
       cards = data.cards;
