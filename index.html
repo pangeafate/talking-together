@@ -4,7 +4,130 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Card Swipe App</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://raw.githubusercontent.com/pangeafate/talking-together/main/styles.css">
+  <style>
+    /* Inline critical CSS to ensure immediate rendering */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .app-container {
+      width: 100%;
+      max-width: 400px;
+      height: 100vh;
+      max-height: 800px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 20px;
+      box-sizing: border-box;
+      background-color: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-container {
+      width: 100%;
+      height: 70%;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .card {
+      position: absolute;
+      width: 90%;
+      height: 90%;
+      background-color: #f9f9f9;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      cursor: grab;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      user-select: none;
+    }
+    
+    .card-text {
+      font-size: 24px;
+      text-align: center;
+      margin-bottom: auto;
+      margin-top: auto;
+    }
+    
+    .card-footer {
+      font-size: 14px;
+      color: #888;
+      margin-top: auto;
+      text-align: center;
+    }
+    
+    .card-indicator {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+    }
+    
+    .card[data-color="orange"] .card-indicator {
+      background-color: #ff9800;
+    }
+    
+    .card[data-color="blue"] .card-indicator {
+      background-color: #2196f3;
+    }
+    
+    .card[data-color="gray"] .card-indicator {
+      background-color: #9e9e9e;
+    }
+    
+    .card[data-color="pink"] .card-indicator {
+      background-color: #e91e63;
+    }
+    
+    .swipe-overlay {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 32px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 10;
+    }
+    
+    .swipe-left {
+      left: 30px;
+      color: #f44336;
+    }
+    
+    .swipe-right {
+      right: 30px;
+      color: #4caf50;
+    }
+    
+    .instructions {
+      margin-top: 20px;
+      color: #888;
+      font-size: 14px;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
   <div class="app-container">
@@ -15,6 +138,439 @@
     <div class="swipe-overlay swipe-right" id="swipe-right">LIKE</div>
     <div class="instructions">Swipe left or right to discard card</div>
   </div>
-  <script src="app.js"></script>
+  
+  <script>
+    // Card Swipe Application
+    document.addEventListener('DOMContentLoaded', () => {
+      // DOM Elements
+      const cardContainer = document.getElementById('card-container');
+      const swipeLeftOverlay = document.getElementById('swipe-left');
+      const swipeRightOverlay = document.getElementById('swipe-right');
+      
+      // App State
+      let cards = [];
+      let currentCardIndex = 0;
+      let currentCard = null;
+      let startX = 0;
+      let currentX = 0;
+      let isDragging = false;
+      
+      // Touch/Mouse positions
+      let initialPosition = { x: 0, y: 0 };
+      let currentPosition = { x: 0, y: 0 };
+      
+      // Constants
+      const SWIPE_THRESHOLD = 100; // Minimum distance to consider a swipe
+      const ROTATION_ANGLE = 0.2; // Rotation angle multiplier
+      
+      // Card data - embedded directly to avoid CORS issues
+      const cardData = [
+        // Orange cards
+        { text: "The last time I got caught...", color: "orange" },
+        { text: "A text message I regret sending...", color: "orange" },
+        { text: "The person whose death I'm most afraid of...", color: "orange" },
+        { text: "A friendship I need to end...", color: "orange" },
+        { text: "Lately I've been getting better at...", color: "orange" },
+        { text: "I'm the most stressed out about...", color: "orange" },
+        { text: "The person I fear losing the most...", color: "orange" },
+        { text: "I spend too much time...", color: "orange" },
+        { text: "I wish I had a second chance at...", color: "orange" },
+        { text: "A lie I'm tempted to tell about myself...", color: "orange" },
+        { text: "I wish I had never seen...", color: "orange" },
+        { text: "A relationship I need to let go of...", color: "orange" },
+        { text: "A dream I've lost hope for...", color: "orange" },
+        { text: "A dream I've never shared...", color: "orange" },
+        { text: "A time I unintentionally hurt someone...", color: "orange" },
+        { text: "A time I needed to admit I was wrong, but didn't...", color: "orange" },
+        { text: "A time I changed my mind...", color: "orange" },
+        { text: "A time I was mean to someone...", color: "orange" },
+        { text: "A story I tell about me that isn't true, but I don't correct...", color: "orange" },
+        { text: "The last time I pretended to be someone I wasn't...", color: "orange" },
+        { text: "My story of heartbreak...", color: "orange" },
+        { text: "The last thing I looked at when I wasn't supposed to...", color: "orange" },
+        { text: "One of the things that is keeping me up at night...", color: "orange" },
+        { text: "A time I felt rejected...", color: "orange" },
+        { text: "A scent that makes me nostalgic...", color: "orange" },
+        { text: "The most unexpected compliment I've ever received...", color: "orange" },
+        { text: "I have a questionable relationship with...", color: "orange" },
+        { text: "I can't believe I got away with...", color: "orange" },
+        { text: "I'm surprised I'm still alive after...", color: "orange" },
+        { text: "I'm particularly stubborn about...", color: "orange" },
+        { text: "I've never shared the whole story about the time...", color: "orange" },
+        { text: "I spend too much money on...", color: "orange" },
+        { text: "I have willpower when it comes to...", color: "orange" },
+        { text: "The time I make a fool of myself...", color: "orange" },
+        { text: "When I'm sick, I want...", color: "orange" },
+        { text: "When I notice myself getting older, I...", color: "orange" },
+        { text: "I'm irrational when it comes to...", color: "orange" },
+        { text: "I'm feeling proud of...", color: "orange" },
+        { text: "I would quit my job if you'd pay me to...", color: "orange" },
+        { text: "I would love to show who I've become...", color: "orange" },
+        { text: "A time someone broke my trust...", color: "orange" },
+        { text: "A conversation I need to have with my parents...", color: "orange" },
+        { text: "Something I would like to change about how I deal with conflict...", color: "orange" },
+        { text: "If I could choose the way I'd die, I'd pick...", color: "orange" },
+        { text: "A blind spot I have is...", color: "orange" },
+        { text: "A conversation I need to have with myself...", color: "orange" },
+        { text: "A decision someone else made that affected my whole life...", color: "orange" },
+        { text: "If you want to make me cry, just...", color: "orange" },
+        { text: "If I could whisper something in the ear of my younger self, I would say...", color: "orange" },
+        
+        // Blue cards
+        { text: "I'm still feeling guilty about...", color: "blue" },
+        { text: "No one understands my relationship to...", color: "blue" },
+        { text: "When I'm mad, I withhold my love by...", color: "blue" },
+        { text: "For me, money means...", color: "blue" },
+        { text: "I haven't told anyone how I feel about...", color: "blue" },
+        { text: "Something my best friends know about me that no one else does...", color: "blue" },
+        { text: "The book I recommend most often...", color: "blue" },
+        { text: "The celebrity I'd want to play me in a movie...", color: "blue" },
+        { text: "The last promise I broke was...", color: "blue" },
+        { text: "A major challenge I've overcome...", color: "blue" },
+        { text: "The last time I was worried that I might become a bad parent...", color: "blue" },
+        { text: "When someone can hear me going to the bathroom, I...", color: "blue" },
+        { text: "When no one is watching I...", color: "blue" },
+        { text: "The most humiliated I've ever felt...", color: "blue" },
+        { text: "The last time I pretended I wasn't crying...", color: "blue" },
+        { text: "I'll never forget being bullied by...", color: "blue" },
+        { text: "An item I've been holding on to for too long...", color: "blue" },
+        { text: "A story I've told about myself that isn't entirely true...", color: "blue" },
+        { text: "A day I've relived too many times...", color: "blue" },
+        { text: "I need to let go of...", color: "blue" },
+        { text: "Today I care a lot less about...", color: "blue" },
+        { text: "I've always dreamt of being famous for...", color: "blue" },
+        { text: "I owe an apology to...", color: "blue" },
+        { text: "If I was going to get fired tomorrow, it would be for...", color: "blue" },
+        { text: "An important value I draw from my culture...", color: "blue" },
+        { text: "The last time I cheated...", color: "blue" },
+        { text: "Something I've been pretending is okay but isn't...", color: "blue" },
+        { text: "My greatest power struggle is with...", color: "blue" },
+        { text: "The person who taught me the most about love...", color: "blue" },
+        { text: "When I was young, I would spend hours daydreaming about...", color: "blue" },
+        { text: "A secret I've kept from my parents...", color: "blue" },
+        { text: "A question I've always wanted to ask my parents...", color: "blue" },
+        { text: "Something about my culture I wish other people understood...", color: "blue" },
+        { text: "Something I grew up thinking was normal but later found out wasn't...", color: "blue" },
+        
+        // Gray cards
+        { text: "The last lie I told was...", color: "gray" },
+        { text: "The last person who pushed me over my edge...", color: "gray" },
+        { text: "Something people often misunderstand about me...", color: "gray" },
+        { text: "A big taboo in my family is...", color: "gray" },
+        { text: "I'm a control freak about...", color: "gray" },
+        { text: "I'm envious of people who...", color: "gray" },
+        { text: "I'm high-maintenance when it comes to...", color: "gray" },
+        { text: "I'm tempted to break my own rules when it comes to...", color: "gray" },
+        { text: "I'm my own worst enemy when...", color: "gray" },
+        { text: "I'm the most judgmental when it comes to...", color: "gray" },
+        { text: "I've always been embarrassed about...", color: "gray" },
+        { text: "I've been faking...", color: "gray" },
+        { text: "In my family, the power lies with...", color: "gray" },
+        { text: "At a party you'll find me...", color: "gray" },
+        { text: "Something I wrongfully took credit for...", color: "gray" },
+        { text: "When I look at a photo of my younger self...", color: "gray" },
+        { text: "When I look in the mirror the first thing I see...", color: "gray" },
+        { text: "When I was younger, I thought the world was...", color: "gray" },
+        { text: "The kindest thing anyone has ever done for me...", color: "gray" },
+        { text: "I'm most proud of my family for...", color: "gray" },
+        { text: "The person I find most annoying is...", color: "gray" },
+        { text: "In my weirdest dream I am...", color: "gray" },
+        { text: "A rule I secretly love to break...", color: "gray" },
+        { text: "It's hard for me to say no to...", color: "gray" },
+        { text: "A decision I've been avoiding...", color: "gray" },
+        { text: "The last time I doubted myself...", color: "gray" },
+        { text: "Between hosting or being hosted, I prefer...", color: "gray" },
+        { text: "The worst date I've ever been on...", color: "gray" },
+        { text: "The person who challenges me the most...", color: "gray" },
+        { text: "The last time I felt like an imposter...", color: "gray" },
+        { text: "A time I admitted I was wrong...", color: "gray" },
+        { text: "If I wrote a book, its title would be...", color: "gray" },
+        { text: "I've always wondered if it's normal to...", color: "gray" },
+        { text: "Something I believe but haven't said aloud...", color: "gray" },
+        { text: "I need to fight harder for...", color: "gray" },
+        { text: "My most irrational fear...", color: "gray" },
+        { text: "When a friend is consistently late...", color: "gray" },
+        { text: "The one who got away...", color: "gray" },
+        { text: "The last time I got lost in a great adventure...", color: "gray" },
+        { text: "I hope you never find out about the time...", color: "gray" },
+        { text: "The worst thing I've ever done to someone...", color: "gray" },
+        { text: "An important object I've lost...", color: "gray" },
+        { text: "I finally have some clarity about...", color: "gray" },
+        { text: "A part that changed my life...", color: "gray" },
+        { text: "Family gatherings bring up...", color: "gray" },
+        { text: "I wish I could get closure on...", color: "gray" },
+        { text: "Something I want but haven't asked for...", color: "gray" },
+        { text: "I've forgotten how to...", color: "gray" },
+        { text: "I hope to be remembered for...", color: "gray" },
+        { text: "Something I wish I had been told as a child...", color: "gray" },
+        { text: "My relationship to my body is...", color: "gray" },
+        { text: "I would sell everything I have to be able to...", color: "gray" },
+        { text: "If I could see into the future, I would want to know...", color: "gray" },
+        { text: "A conversation I've been meaning to have...", color: "gray" },
+        { text: "An experience that shaped who I am that few people know about...", color: "gray" },
+        { text: "The person who intimidates me the most...", color: "gray" },
+        { text: "The taste of power makes me...", color: "gray" },
+        
+        // Pink cards
+        { text: "A text message I fantasize receiving...", color: "pink" },
+        { text: "I feel most attractive when...", color: "pink" },
+        { text: "My beliefs about marriage have been most challenged by...", color: "pink" },
+        { text: "The most memorable place I've had sex...", color: "pink" },
+        { text: "My earliest memory of sexuality...", color: "pink" },
+        { text: "When it comes to initiating sex, I prefer...", color: "pink" },
+        { text: "I'll never forget the time I was seduced by...", color: "pink" },
+        { text: "The first time I masturbated...", color: "pink" },
+        { text: "One thing I do to make sex more interesting...", color: "pink" },
+        { text: "Sex is most interesting for me when...", color: "pink" },
+        { text: "A text message I fantasize sending...", color: "pink" },
+        { text: "The most scandalous photo that could leak of me...", color: "pink" },
+        { text: "A lie I've told about my sex life...", color: "pink" },
+        { text: "In my latest fantasy I am...", color: "pink" },
+        { text: "When I hear the words 'forbidden,' the first thing that comes to mind is...", color: "pink" },
+        { text: "Between Dom or sub, my preference is...", color: "pink" },
+        { text: "The worst kiss I've ever had...", color: "pink" },
+        { text: "The difference between making love and having sex is...", color: "pink" },
+        { text: "I think the concept of marriage is...", color: "pink" },
+        { text: "I turn myself off by...", color: "pink" },
+        { text: "If I caught my friend having an affair, I would...", color: "pink" },
+        { text: "If my partner had an affair, I would...", color: "pink" },
+        { text: "The wildest sexual situation I've ever been a part of...", color: "pink" },
+        { text: "The weirdest place I've had sex...", color: "pink" },
+        { text: "During sex, the world melts away when...", color: "pink" },
+        { text: "I wish someone had told me about sex...", color: "pink" },
+        { text: "A kink I don't understand...", color: "pink" },
+        { text: "I feel most erotic when...", color: "pink" },
+        { text: "I get bored during sex when...", color: "pink" },
+        { text: "My most embarrassing sexual mishap...", color: "pink" },
+        { text: "My favorite sex story to tell...", color: "pink" },
+        { text: "I turn myself on by...", color: "pink" },
+        { text: "My most cringeworthy sexual memory...", color: "pink" },
+        { text: "In my family, sex is...", color: "pink" },
+        { text: "A myth about sex I've had to dispel...", color: "pink" },
+        { text: "The most sensual experience I've had without having sex...", color: "pink" },
+        { text: "A fantasy of mine I'm conflicted about...", color: "pink" },
+        { text: "A sexual situation I've always wanted to try...", color: "pink" },
+        { text: "My most persistent sexual fantasy is...", color: "pink" },
+        { text: "My family's attitude toward sex was...", color: "pink" },
+        { text: "Monogamy is...", color: "pink" },
+        { text: "My sexual education has come from...", color: "pink" },
+        { text: "The worst postcoital moment I've ever experienced...", color: "pink" },
+        { text: "A sexual dilemma I grapple with...", color: "pink" },
+        { text: "My sex life was never the same after...", color: "pink" }
+      ];
+      
+      // Initialize cards array
+      cards = [...cardData];
+      
+      // Shuffle cards using Fisher-Yates algorithm
+      function shuffleCards() {
+        for (let i = cards.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [cards[i], cards[j]] = [cards[j], cards[i]];
+        }
+      }
+      
+      // Create and render a new card
+      function renderNextCard() {
+        if (currentCardIndex >= cards.length) {
+          // Reshuffle when we've gone through all cards
+          shuffleCards();
+          currentCardIndex = 0;
+        }
+        
+        const cardData = cards[currentCardIndex];
+        
+        // Create card element
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.setAttribute('data-color', cardData.color);
+        card.style.zIndex = 1;
+        
+        // Create card content
+        const cardText = document.createElement('div');
+        cardText.className = 'card-text';
+        cardText.textContent = cardData.text;
+        
+        // Create card indicator (colored dot)
+        const cardIndicator = document.createElement('div');
+        cardIndicator.className = 'card-indicator';
+        
+        // Create card footer
+        const cardFooter = document.createElement('div');
+        cardFooter.className = 'card-footer';
+        cardFooter.textContent = 'We Should Talk';
+        
+        // Append elements to card
+        card.appendChild(cardText);
+        card.appendChild(cardFooter);
+        card.appendChild(cardIndicator);
+        
+        // Add card to container
+        cardContainer.appendChild(card);
+        
+        // Set as current card
+        currentCard = card;
+        
+        // Add event listeners for dragging
+        addCardEventListeners(card);
+        
+        // Prepare next card index
+        currentCardIndex++;
+      }
+      
+      // Add event listeners for card dragging
+      function addCardEventListeners(card) {
+        // Mouse events
+        card.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', endDrag);
+        
+        // Touch events
+        card.addEventListener('touchstart', startDrag, { passive: true });
+        document.addEventListener('touchmove', drag, { passive: true });
+        document.addEventListener('touchend', endDrag);
+      }
+      
+      // Start dragging the card
+      function startDrag(event) {
+        if (!currentCard) return;
+        
+        isDragging = true;
+        
+        // Get initial position
+        if (event.type.includes('mouse')) {
+          initialPosition.x = event.clientX;
+          initialPosition.y = event.clientY;
+        } else {
+          initialPosition.x = event.touches[0].clientX;
+          initialPosition.y = event.touches[0].clientY;
+        }
+        
+        // Reset current position
+        currentPosition.x = initialPosition.x;
+        currentPosition.y = initialPosition.y;
+        
+        // Add grabbing cursor
+        currentCard.style.cursor = 'grabbing';
+      }
+      
+      // Drag the card
+      function drag(event) {
+        if (!isDragging || !currentCard) return;
+        
+        // Get current position
+        if (event.type.includes('mouse')) {
+          currentPosition.x = event.clientX;
+          currentPosition.y = event.clientY;
+        } else {
+          currentPosition.x = event.touches[0].clientX;
+          currentPosition.y = event.touches[0].clientY;
+        }
+        
+        // Calculate distance moved
+        const deltaX = currentPosition.x - initialPosition.x;
+        const deltaY = currentPosition.y - initialPosition.y;
+        
+        // Move the card
+        currentCard.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${deltaX * ROTATION_ANGLE}deg)`;
+        
+        // Show appropriate overlay based on swipe direction
+        if (deltaX > 50) {
+          swipeRightOverlay.style.opacity = Math.min(deltaX / SWIPE_THRESHOLD, 1);
+          swipeLeftOverlay.style.opacity = 0;
+        } else if (deltaX < -50) {
+          swipeLeftOverlay.style.opacity = Math.min(Math.abs(deltaX) / SWIPE_THRESHOLD, 1);
+          swipeRightOverlay.style.opacity = 0;
+        } else {
+          swipeLeftOverlay.style.opacity = 0;
+          swipeRightOverlay.style.opacity = 0;
+        }
+      }
+      
+      // End dragging the card
+      function endDrag() {
+        if (!isDragging || !currentCard) return;
+        
+        isDragging = false;
+        
+        // Calculate distance moved
+        const deltaX = currentPosition.x - initialPosition.x;
+        
+        // Check if swipe threshold was met
+        if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
+          // Swipe animation
+          const direction = deltaX > 0 ? 1 : -1;
+          currentCard.style.transform = `translate(${direction * window.innerWidth}px, ${currentPosition.y - initialPosition.y}px) rotate(${direction * 30}deg)`;
+          currentCard.style.opacity = 0;
+          
+          // Remove card after animation
+          setTimeout(() => {
+            if (currentCard && currentCard.parentNode) {
+              currentCard.parentNode.removeChild(currentCard);
+            }
+            currentCard = null;
+            
+            // Reset overlays
+            swipeLeftOverlay.style.opacity = 0;
+            swipeRightOverlay.style.opacity = 0;
+            
+            // Render next card
+            renderNextCard();
+          }, 300);
+        } else {
+          // Reset card position if not swiped far enough
+          currentCard.style.transform = 'translate(0, 0) rotate(0)';
+          
+          // Reset overlays
+          swipeLeftOverlay.style.opacity = 0;
+          swipeRightOverlay.style.opacity = 0;
+        }
+        
+        // Reset cursor
+        if (currentCard) {
+          currentCard.style.cursor = 'grab';
+        }
+      }
+      
+      // Add keyboard controls for accessibility
+      document.addEventListener('keydown', (event) => {
+        if (!currentCard) return;
+        
+        if (event.key === 'ArrowLeft') {
+          // Simulate left swipe
+          currentCard.style.transform = `translate(-${window.innerWidth}px, 0) rotate(-30deg)`;
+          currentCard.style.opacity = 0;
+          swipeLeftOverlay.style.opacity = 1;
+          
+          setTimeout(() => {
+            if (currentCard && currentCard.parentNode) {
+              currentCard.parentNode.removeChild(currentCard);
+            }
+            currentCard = null;
+            swipeLeftOverlay.style.opacity = 0;
+            renderNextCard();
+          }, 300);
+        } else if (event.key === 'ArrowRight') {
+          // Simulate right swipe
+          currentCard.style.transform = `translate(${window.innerWidth}px, 0) rotate(30deg)`;
+          currentCard.style.opacity = 0;
+          swipeRightOverlay.style.opacity = 1;
+          
+          setTimeout(() => {
+            if (currentCard && currentCard.parentNode) {
+              currentCard.parentNode.removeChild(currentCard);
+            }
+            currentCard = null;
+            swipeRightOverlay.style.opacity = 0;
+            renderNextCard();
+          }, 300);
+        }
+      });
+      
+      // Initialize
+      shuffleCards();
+      renderNextCard();
+    });
+  </script>
 </body>
 </html>
